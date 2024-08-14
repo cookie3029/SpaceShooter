@@ -1,3 +1,5 @@
+#pragma warning disable CS0108
+
 using System;
 using UnityEngine;
 
@@ -20,10 +22,16 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private GameObject bulletPrefab;
 
+    [SerializeField]
+    private AudioClip fireSfx;
+
     // Animator 컴포넌트를 저장할 변수 선언
     // [NonSerialized] => 밑의 속성과 같은 동작을 수행함
     [HideInInspector]
     public Animator animator;
+
+    // private new AudioSource audio;
+    private AudioSource audio;
 
     // Animator Hash 추출
     private readonly int hashForward = Animator.StringToHash("forward");
@@ -34,6 +42,7 @@ public class PlayerController : MonoBehaviour
     {
         // animator = this.gameObject.GetComponent<Animator>();
         animator = GetComponent<Animator>();
+        audio = GetComponent<AudioSource>();
     }
 
     // 매 프레임마다 호출, 60FPS, 불규칙한 주기, 렌더링 주기와 동일
@@ -52,6 +61,11 @@ public class PlayerController : MonoBehaviour
             // 총알 프리팹을 이용해서 런타임에서 동적으로 생성
             // Instantiate(생성할 객체, 위치, 각도);
             Instantiate(bulletPrefab, firePos.position, firePos.rotation);
+
+            // 총소리 발생
+            // audio.clip = fireSfx;
+            // audio.Play();
+            audio.PlayOneShot(fireSfx, 0.8f);
         }
     }
 

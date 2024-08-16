@@ -1,7 +1,9 @@
 #pragma warning disable CS0108
 
 using System;
+using System.Collections;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class PlayerController : MonoBehaviour
 {
@@ -25,6 +27,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private AudioClip fireSfx;
 
+    [SerializeField]
+    private MeshRenderer muzzleFlash;
+
     // Animator 컴포넌트를 저장할 변수 선언
     // [NonSerialized] => 밑의 속성과 같은 동작을 수행함
     [HideInInspector]
@@ -43,6 +48,10 @@ public class PlayerController : MonoBehaviour
         // animator = this.gameObject.GetComponent<Animator>();
         animator = GetComponent<Animator>();
         audio = GetComponent<AudioSource>();
+
+        // MuzzleFlash의 MeshRenderer 컴포넌트 추출
+        muzzleFlash = firePos.GetComponentInChildren<MeshRenderer>();
+        muzzleFlash.enabled = false;
     }
 
     // 매 프레임마다 호출, 60FPS, 불규칙한 주기, 렌더링 주기와 동일
@@ -66,7 +75,34 @@ public class PlayerController : MonoBehaviour
             // audio.clip = fireSfx;
             // audio.Play();
             audio.PlayOneShot(fireSfx, 0.8f);
+
+            // 총구 화염 효과
+            StartCoroutine(ShowMuzzleFlash());
         }
+    }
+
+    // 코루틴(Co-routine)
+    private IEnumerator ShowMuzzleFlash()
+    {
+        // MuzzleFlash 활성화
+        muzzleFlash.enabled = true;
+
+        // Texture Offset 변경 (0,0) (0.5, 0) (0.5, 0.5) (0, 0.5)
+        // Random.Range(0, 2) = (0, 1) * 0.5
+        Vector2 offset = new Vector2(Random.Range(0, 2), Random.Range(0, 2)) * 0.5f;
+        muzzleFlash.material.mainTextureOffset = offset;
+
+        // Scale 변경
+        muzzleFlash.transform.localScale = Vector3.one * Random.Range(1.0f, 3.0f);
+
+        // Z축 회전
+        muzzleFlash.transform.localRotation = Quaternion.Euler(Vector3.forward * Random.Range(0, 360));
+
+        // Waiting ...
+        yield return new WaitForSeconds(0.2f);
+
+        // MuzzleFlash 비활성화
+        muzzleFlash.enabled = false;
     }
 
     private void Animation()
@@ -113,4 +149,23 @@ public class PlayerController : MonoBehaviour
 
     Vector3.one     = Vector3(1, 1, 1)
     Vector3.zero    = Vector3(0, 0, 0)
+*/
+
+/*
+    Quaternion 쿼터니언 (사 원수) x, y, z, w
+    복소수 사차원 벡터
+
+    오일러 회전 (오일러각 Euler) 0 ~ 360
+    x -> y -> z
+
+    짐벌락(Gimbal Lock)
+
+    Quaternion.Euler(30, 45, -15)
+    => 오일럭 각을 쿼터니언으로 변환
+
+    Quaternion.LookRotation(벡터)
+    => 벡터가 가리키는 방향을 쿼터니언으로 변환
+
+    Quaternion.identity
+    => 오브젝트가 바라보는 방향을 쿼터니언으로 나타냄
 */

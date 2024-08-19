@@ -42,6 +42,15 @@ public class PlayerController : MonoBehaviour
     private readonly int hashForward = Animator.StringToHash("forward");
     private readonly int hashStrafe = Animator.StringToHash("strafe");
 
+    private float initHp = 100.0f;
+    private float currHp = 100.0f;
+
+    // User Define Event 사용자 정의 이벤트
+    // Delegate 델리게이트 - 대리자
+    public delegate void PlayerDieHandler();
+    // 이벤트 선언
+    public static event PlayerDieHandler OnPlayerDie;
+
     // 1. 호출, 제일 먼저 호출
     void Start()
     {
@@ -138,6 +147,35 @@ public class PlayerController : MonoBehaviour
         v = Input.GetAxis("Vertical");
         h = Input.GetAxis("Horizontal");
         r = Input.GetAxis("Mouse X");
+    }
+
+    void OnTriggerEnter(Collider coll)
+    {
+        if (currHp > 0.0f && coll.gameObject.CompareTag("PUNCH"))
+        {
+            currHp -= 10.0f;
+
+            if (currHp <= 0.0f)
+            {
+                // 이벤트를 발생(Raise)
+                OnPlayerDie();
+                GameManager.Instance.IsGameOver = true;
+
+                // PlayerDie();
+            }
+        }
+    }
+
+    private void PlayerDie()
+    {
+        // MONSTER 태그를 달고 있는 모든 몬스터를 추출
+        GameObject[] monsters = GameObject.FindGameObjectsWithTag("MONSTER");
+
+        foreach (var monster in monsters)
+        {
+            // monster.SendMessage("YouWin", SendMessageOptions.DontRequireReceiver);
+            monster.GetComponent<MonsterController>().YouWin();
+        }
     }
 }
 

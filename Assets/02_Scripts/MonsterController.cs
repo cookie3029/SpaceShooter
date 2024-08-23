@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using Random = UnityEngine.Random;
 
-public class MonsterController : MonoBehaviour
+public class MonsterController : MonoBehaviour, IDamagable
 {
     public enum State
     {
@@ -43,6 +43,9 @@ public class MonsterController : MonoBehaviour
     void OnEnable()
     {
         PlayerController.OnPlayerDie += YouWin;
+
+        StartCoroutine(CheckMonsterState());
+        StartCoroutine(MonsterAction());
     }
 
     void OnDisable()
@@ -50,7 +53,7 @@ public class MonsterController : MonoBehaviour
         PlayerController.OnPlayerDie -= YouWin;
     }
 
-    void Start()
+    void Awake()
     {
         // GameObject playerObj = GameObject.Find("Player");
         GameObject playerObj = GameObject.FindGameObjectWithTag("PLAYER");
@@ -61,9 +64,6 @@ public class MonsterController : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
 
         animator = GetComponent<Animator>();
-
-        StartCoroutine(CheckMonsterState());
-        StartCoroutine(MonsterAction());
     }
 
     IEnumerator CheckMonsterState()
@@ -125,6 +125,8 @@ public class MonsterController : MonoBehaviour
                     animator.SetTrigger(hashDie);
                     GetComponent<CapsuleCollider>().enabled = false;
                     // StopCoroutine(CheckMonsterState());
+                    // 오브젝트 풀에 환원
+                    Invoke(nameof(ReturnPool), 3.0f);
                     break;
             }
 
@@ -132,20 +134,22 @@ public class MonsterController : MonoBehaviour
         }
     }
 
-    void OnCollisionEnter(Collision coll)
+    void ReturnPool()
     {
-        if (coll.gameObject.CompareTag("BULLET"))
-        {
-            Destroy(coll.gameObject);
-            animator.SetTrigger(hashHit);
-            hp -= 20.0f;
-
-            if (hp <= 0)
-            {
-                state = State.DIE;
-            }
-        }
+        hp = 100.0f;
+        isDie = false;
+        state = State.IDLE;
+        GetComponent<CapsuleCollider>().enabled = true;
+        this.gameObject.SetActive(false);
     }
+
+    // void OnCollisionEnter(Collision coll)
+    // {
+    //     if (coll.gameObject.CompareTag("BULLET"))
+    //     {
+    //         PoolManager.Instance.bulletPool.Release(coll.gameObject.GetComponent<Bullet>());
+    //     }
+    // }
 
     void OnTriggerEnter(Collider coll)
     {
@@ -160,5 +164,17 @@ public class MonsterController : MonoBehaviour
         agent.isStopped = true;
 
         StopAllCoroutines();
+    }
+
+    public void OnDamaged()
+    {
+        animator.SetTrigger(hashHit);
+        hp -= 20.0f;
+
+        if (hp <= 0 && state != State.DIE)
+        {
+            state = State.DIE;
+            GameManager.Instance.Score = 50;
+        }
     }
 }

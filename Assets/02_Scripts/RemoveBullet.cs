@@ -2,7 +2,8 @@ using UnityEngine;
 
 public class RemoveBullet : MonoBehaviour
 {
-    public GameObject sparkEffect;
+    [SerializeField]
+    private EffectDataSO effectDataSO;
 
     void OnCollisionEnter(Collision coll)
     {
@@ -22,7 +23,7 @@ public class RemoveBullet : MonoBehaviour
             Quaternion rot = Quaternion.LookRotation(_normal);
 
             // 스파크 이펙트 생성
-            GameObject obj = Instantiate(sparkEffect, _point, rot);
+            GameObject obj = Instantiate(effectDataSO.sparkEffect, _point, rot);
 
             Destroy(obj, 0.5f);
 

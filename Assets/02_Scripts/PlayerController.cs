@@ -3,6 +3,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
 public class PlayerController : MonoBehaviour
@@ -16,7 +17,7 @@ public class PlayerController : MonoBehaviour
     private float moveSpeed = 3.0f;
 
     [SerializeField]
-    private float turnSpeed = 200.0f;
+    private float turnSpeed = 300.0f;
 
     [SerializeField]
     private Transform firePos;
@@ -30,6 +31,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private MeshRenderer muzzleFlash;
 
+    [SerializeField]
+    private float fireRate = 0.1f;
+
+    [SerializeField]
+    private Image hpBar;
+
     // Animator 컴포넌트를 저장할 변수 선언
     // [NonSerialized] => 밑의 속성과 같은 동작을 수행함
     [HideInInspector]
@@ -38,12 +45,19 @@ public class PlayerController : MonoBehaviour
     // private new AudioSource audio;
     private AudioSource audio;
 
+    private CharacterController cc;
+
     // Animator Hash 추출
     private readonly int hashForward = Animator.StringToHash("forward");
     private readonly int hashStrafe = Animator.StringToHash("strafe");
 
     private float initHp = 100.0f;
+
     private float currHp = 100.0f;
+
+    private bool isFire => Input.GetMouseButton(0);
+
+    private float nextFireTime = 0.0f;
 
     // User Define Event 사용자 정의 이벤트
     // Delegate 델리게이트 - 대리자
@@ -54,9 +68,14 @@ public class PlayerController : MonoBehaviour
     // 1. 호출, 제일 먼저 호출
     void Start()
     {
+        // Cursor Lock
+        Cursor.lockState = CursorLockMode.Locked;
+        //Cursor.SetCursor()
+
         // animator = this.gameObject.GetComponent<Animator>();
         animator = GetComponent<Animator>();
         audio = GetComponent<AudioSource>();
+        cc = GetComponent<CharacterController>();
 
         // MuzzleFlash의 MeshRenderer 컴포넌트 추출
         muzzleFlash = firePos.GetComponentInChildren<MeshRenderer>();
@@ -74,11 +93,23 @@ public class PlayerController : MonoBehaviour
 
     private void Fire()
     {
-        if (Input.GetMouseButtonDown(0))
+        Debug.DrawRay(firePos.position, firePos.forward * 10.0f, Color.green);
+
+        if (isFire && Time.time >= nextFireTime)
         {
             // 총알 프리팹을 이용해서 런타임에서 동적으로 생성
             // Instantiate(생성할 객체, 위치, 각도);
-            Instantiate(bulletPrefab, firePos.position, firePos.rotation);
+            // Instantiate(bulletPrefab, firePos.position, firePos.rotation);
+
+            Bullet bullet = PoolManager.Instance.bulletPool.Get();
+            bullet.transform.SetPositionAndRotation(firePos.position, firePos.rotation);
+            bullet.Shoot();
+
+            if (Physics.Raycast(firePos.position, firePos.forward, out RaycastHit hit, 10.0f, 1 << 8 | 1 << 10))
+            {
+                Debug.Log(hit.collider.name);
+                hit.collider.GetComponent<IDamagable>().OnDamaged();
+            }
 
             // 총소리 발생
             // audio.clip = fireSfx;
@@ -87,6 +118,8 @@ public class PlayerController : MonoBehaviour
 
             // 총구 화염 효과
             StartCoroutine(ShowMuzzleFlash());
+
+            nextFireTime = Time.time + fireRate;
         }
     }
 
@@ -125,7 +158,8 @@ public class PlayerController : MonoBehaviour
     {
         // Vector 덧셈 연산
         // 이동처리 로직
-        Vector3 moveDir = (Vector3.forward * v) + (Vector3.right * h);
+        // Vector3 moveDir = (Vector3.forward * v) + (Vector3.right * h);
+        Vector3 moveDir = (transform.forward * v) + (transform.right * h);
         // Debug.Log("비정규화 " + moveDir.magnitude);
         // Debug.Log("정규화 " + moveDir.normalized.magnitude);
 
@@ -135,7 +169,8 @@ public class PlayerController : MonoBehaviour
         // transform.Translate(Vector3.forward * v * 0.1f);
         // transform.Translate(Vector3.right * h * 0.1f);
 
-        transform.Translate(moveDir.normalized * Time.deltaTime * moveSpeed);
+        cc.Move(moveDir.normalized * Time.deltaTime * moveSpeed);
+        // transform.Translate(moveDir.normalized * Time.deltaTime * moveSpeed);
 
         // 회전 처리 로직
         transform.Rotate(Vector3.up * Time.deltaTime * r * turnSpeed);
@@ -154,6 +189,7 @@ public class PlayerController : MonoBehaviour
         if (currHp > 0.0f && coll.gameObject.CompareTag("PUNCH"))
         {
             currHp -= 10.0f;
+            hpBar.fillAmount = currHp / initHp;
 
             if (currHp <= 0.0f)
             {
